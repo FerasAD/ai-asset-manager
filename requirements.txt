@@ -1,0 +1,6 @@
+PySide6
+mutagen
+sentence-transformers
+transformers
+torch
+librosa
