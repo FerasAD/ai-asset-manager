@@ -1,9 +1,11 @@
 import os
 
+# Supported audio formats — any file not in this set is ignored during scanning
 SUPPORTED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg"}
 
 
 def scan_audio_files(folder_path):
+    # Walks the selected folder and all subfolders, returns sorted list of matching audio file paths
     audio_files = []
 
     for root, _, files in os.walk(folder_path):

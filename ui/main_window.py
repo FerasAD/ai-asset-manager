@@ -135,9 +135,16 @@ class MainWindow(QMainWindow):
         self.search_bar.setPlaceholderText("Search by keyword or meaning...")
         self.search_bar.textChanged.connect(self.filter_assets)
 
+        # Toggle to hide low-relevance semantic results below score threshold
+        self.filter_toggle = QPushButton("Filter: Off")
+        self.filter_toggle.setCheckable(True)
+        self.filter_toggle.setChecked(False)
+        self.filter_toggle.clicked.connect(self._on_filter_toggle)
+
         controls_layout.addWidget(self.select_folder_button, 1)
         controls_layout.addWidget(self.search_mode, 1)
         controls_layout.addWidget(self.search_bar, 3)
+        controls_layout.addWidget(self.filter_toggle, 1)
         controls_container.setLayout(controls_layout)
 
         # ── Main content — left list + right details ───────────────────────── 
@@ -260,6 +267,12 @@ class MainWindow(QMainWindow):
                 color: #9ca3af;
                 border: 1px solid #e5e7eb;
             }
+            QPushButton#filterActive {
+                background-color: #1d4ed8;
+                color: #ffffff;
+                border: 1px solid #1e40af;
+            }
+            QPushButton#filterActive:hover { background-color: #1e40af; }
             QLineEdit, QComboBox, QTextEdit, QListWidget {
                 background-color: #ffffff;
                 border: 1px solid #d1d5db;
@@ -352,6 +365,17 @@ class MainWindow(QMainWindow):
         assets = get_all_assets()
         self.display_assets(assets)
 
+    def _on_filter_toggle(self):
+        # Updates button label and style, then re-runs the current search to apply or remove filter
+        if self.filter_toggle.isChecked():
+            self.filter_toggle.setText("Filter: On")
+            self.filter_toggle.setObjectName("filterActive")
+        else:
+            self.filter_toggle.setText("Filter: Off")
+            self.filter_toggle.setObjectName("")
+        self.filter_toggle.setStyle(self.filter_toggle.style())
+        self.filter_assets()
+
     def filter_assets(self):
         # Called on every keystroke — routes to keyword or semantic search based on dropdown
         query = self.search_bar.text().strip()
@@ -375,11 +399,18 @@ class MainWindow(QMainWindow):
 
             if embedded_assets:
                 results = semantic_search_audio(query, embedded_assets, top_k=20)
+
+                # If filter is active, remove results below the relevance threshold
+                if self.filter_toggle.isChecked():
+                    results = [r for r in results if r["score"] >= 0.25]
+
                 ranked_assets = [r["asset"] for r in results]
                 self.display_assets(ranked_assets, semantic_scores=results)
                 log_search(query, "semantic_audio", len(ranked_assets))
+
+                filter_note = " (filtered)" if self.filter_toggle.isChecked() else ""
                 self.status_label.setText(
-                    f"Audio semantic search: {len(ranked_assets)} result(s) for '{query}'."
+                    f"Audio semantic search{filter_note}: {len(ranked_assets)} result(s) for '{query}'."
                 )
 
             else:
